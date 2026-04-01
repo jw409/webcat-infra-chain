@@ -13,7 +13,7 @@ use felidae_types::response::ChainInfo;
 use crate::binaries::find_binaries;
 use crate::constants::network_startup_timeout;
 use crate::harness::TestNetwork;
-use crate::helpers::run_query_command;
+use crate::helpers::{query_config, run_query_command};
 
 /// Manages a joined node's processes so they are cleaned up on drop.
 struct JoinedNode {
@@ -152,6 +152,18 @@ async fn test_join_network_syncs_to_target_height() -> color_eyre::Result<()> {
                         "[test] joined node synced! height={} >= target={}",
                         info.block_height, target_height
                     );
+
+                    // Compare the Config value returned by the newly-joined node
+                    // to one reported by a genesis validator. Slightly more substantive
+                    // than a simple height check.
+                    let expected_config = query_config(&felidae_bin, &network.query_url())?;
+                    let joined_config = query_config(&felidae_bin, &joined_query_url)?;
+                    assert_eq!(
+                        joined_config, expected_config,
+                        "joined node's config should match the network's config"
+                    );
+                    eprintln!("[test] joined node state verified: config matches network");
+
                     return Ok(());
                 }
             }
